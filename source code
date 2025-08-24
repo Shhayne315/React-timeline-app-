@@ -1,0 +1,268 @@
+import React, { useState, useEffect, useRef } from 'react';
+
+interface TimelineEvent {
+  id: number;
+  time: string;
+  title: string;
+  description: string;
+  date: string;
+  imageUrl: string;
+  imageAlt: string;
+  category: string;
+}
+
+const fetchEvents = (): Promise<TimelineEvent[]> => {
+  const mockData: TimelineEvent[] = [
+    {
+      id: 1,
+      time: "9:00 AM",
+      title: "The Trip Begins!",
+      description: "Our summer holiday adventure starts today. We're packed and ready for the airport.",
+      date: "2025-09-01",
+      imageUrl: "https://placehold.co/600x400/818CF8/FFFFFF?text=Departure",
+      imageAlt: "Placeholder image for departure",
+      category: "Day 1"
+    },
+    {
+      id: 2,
+      time: "1:00 PM",
+      title: "Arrival & Check-in",
+      description: "Landed safely, picked up the rental car, and checked into our beautiful hotel with an ocean view.",
+      date: "2025-09-01",
+      imageUrl: "https://placehold.co/600x400/F59E0B/FFFFFF?text=Arrival",
+      imageAlt: "Placeholder image for arrival",
+      category: "Day 1"
+    },
+    {
+      id: 3,
+      time: "10:00 AM",
+      title: "Beach Day",
+      description: "Spent the entire morning enjoying the sun, sand, and crystal clear water at the local beach.",
+      date: "2025-09-02",
+      imageUrl: "https://placehold.co/600x400/34D399/FFFFFF?text=Beach",
+      imageAlt: "Placeholder image for the beach",
+      category: "Day 2"
+    },
+    {
+      id: 4,
+      time: "7:00 PM",
+      title: "Sunset Dinner",
+      description: "A wonderful dinner at a cliffside restaurant, watching the sun set over the horizon.",
+      date: "2025-09-02",
+      imageUrl: "https://placehold.co/600x400/F472B6/FFFFFF?text=Dinner",
+      imageAlt: "Placeholder image for a sunset dinner",
+      category: "Day 2"
+    }
+  ];
+  return new Promise(resolve => setTimeout(() => resolve(mockData), 500));
+};
+
+const styles = `
+  :root {
+    --bg-color: #f8fafc;
+    --text-color: #0f172a;
+    --card-bg: #ffffff;
+    --border-color: #e2e8f0;
+    --primary-color: #4338ca;
+    --shadow-color: rgba(0, 0, 0, 0.05);
+    --font-sans: 'Inter', sans-serif;
+  }
+  body {
+    font-family: var(--font-sans);
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    margin: 0;
+    padding: 0;
+  }
+  .app-container { max-width: 900px; margin: 0 auto; padding: 0 1rem; }
+  .header { display: flex; justify-content: space-between; align-items: center; padding: 1rem 0; border-bottom: 1px solid var(--border-color); }
+  .header h1 { font-size: 1.75rem; color: var(--primary-color); margin: 0; }
+  .header button { background: none; border: 2px solid var(--border-color); border-radius: 50%; width: 40px; height: 40px; cursor: pointer; font-size: 1.2rem; }
+  .filter-panel { text-align: center; padding: 1.5rem 0; color: #64748b; }
+  .timeline-container { position: relative; padding: 2rem 0; border-left: 3px solid var(--border-color); margin-left: 2rem; }
+  
+  .event-marker {
+    position: relative;
+    margin-bottom: 2rem;
+    padding-left: 3rem;
+  }
+  .event-marker-button {
+    background: none;
+    border: none;
+    padding: 0;
+    text-align: left;
+    width: 100%;
+    cursor: pointer;
+  }
+  .event-marker-button:focus {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 4px;
+    border-radius: 12px;
+  }
+  .event-marker::before {
+    content: '';
+    position: absolute;
+    top: 5px;
+    left: -9px;
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    background-color: var(--primary-color);
+    border: 3px solid var(--bg-color);
+  }
+  .event-card {
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 12px var(--shadow-color);
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .event-marker-button:hover .event-card {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+  }
+  .event-card h2 { font-size: 1.5rem; margin: 0 0 0.5rem 0; }
+  .event-card time { font-weight: bold; color: var(--primary-color); }
+  
+  .event-modal {
+    border: none;
+    border-radius: 16px;
+    padding: 2rem;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+  }
+  .event-modal::backdrop {
+    background-color: rgba(15, 23, 42, 0.8);
+  }
+  .modal-content img { width: 100%; border-radius: 8px; margin-bottom: 1rem; }
+  .modal-close-btn {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: var(--border-color);
+    border: none;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    font-size: 1rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+`;
+
+const Header: React.FC = () => (
+  <header className="header">
+    <h1>Summer Holiday Trip</h1>
+    <button aria-label="Toggle theme">☀️</button>
+  </header>
+);
+
+const FilterPanel: React.FC = () => (
+  <div className="filter-panel">
+    <em>Filter controls will be implemented here.</em>
+  </div>
+);
+
+interface EventModalProps {
+  event: TimelineEvent;
+  onClose: () => void;
+}
+const EventModal: React.FC<EventModalProps> = ({ event, onClose }) => {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (dialog) {
+      dialog.showModal();
+      dialog.addEventListener('close', onClose);
+    }
+    return () => dialog?.removeEventListener('close', onClose);
+  }, [onClose]);
+
+  return (
+    <dialog ref={dialogRef} className="event-modal" aria-labelledby="modal-title">
+      <div className="modal-content">
+        <button className="modal-close-btn" onClick={() => dialogRef.current?.close()} aria-label="Close dialog">×</button>
+        <img src={event.imageUrl} alt={event.imageAlt} />
+        <h2 id="modal-title">{event.title}</h2>
+        <p>{event.description}</p>
+        <time dateTime={event.date}>
+          {event.category} - {new Date(event.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+        </time>
+      </div>
+    </dialog>
+  );
+};
+
+interface EventMarkerProps {
+  event: TimelineEvent;
+  onMarkerClick: () => void;
+}
+const EventMarker: React.FC<EventMarkerProps> = ({ event, onMarkerClick }) => (
+  <div className="event-marker">
+    <button 
+      className="event-marker-button" 
+      onClick={onMarkerClick}
+      aria-haspopup="dialog"
+    >
+      <div className="event-card">
+        <time dateTime={event.date}>{event.time}</time>
+        <h2>{event.title}</h2>
+      </div>
+    </button>
+  </div>
+);
+
+const Timeline: React.FC = () => {
+  const [events, setEvents] = useState<TimelineEvent[]>([]);
+  const [selectedEvent, setSelectedEvent] = useState<TimelineEvent | null>(null);
+  const triggerRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    fetchEvents().then(data => setEvents(data));
+  }, []);
+
+  const handleOpenModal = (event: TimelineEvent) => {
+    triggerRef.current = document.activeElement as HTMLElement;
+    setSelectedEvent(event);
+  };
+
+  const handleCloseModal = () => {
+    setSelectedEvent(null);
+    triggerRef.current?.focus();
+  };
+
+  return (
+    <div className="timeline-container" role="list">
+      {events.length > 0 ? (
+        events.map((event) => (
+          <div role="listitem" key={event.id}>
+            <EventMarker event={event} onMarkerClick={() => handleOpenModal(event)} />
+          </div>
+        ))
+      ) : (
+        <p>Loading trip details...</p>
+      )}
+      {selectedEvent && <EventModal event={selectedEvent} onClose={handleCloseModal} />}
+    </div>
+  );
+};
+
+export default function App() {
+  return (
+    <>
+      <style>{styles}</style>
+      <div className="app-container">
+        <Header />
+        <main>
+          <FilterPanel />
+          <Timeline />
+        </main>
+      </div>
+    </>
+  );
+}
